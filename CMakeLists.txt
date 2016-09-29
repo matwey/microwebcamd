@@ -9,8 +9,9 @@ pkg_check_modules(MICROHTTPD REQUIRED libmicrohttpd)
 pkg_check_modules(CHECK REQUIRED check)
 pkg_check_modules(SYSTEMD libsystemd)
 find_package(CURL REQUIRED)
+find_package(Threads REQUIRED)
 
-set(CMAKE_C_FLAGS "-std=c99 -D_FILE_OFFSET_BITS=64 -D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED ${MICROHTTPD_CFLAGS} ${CHECK_CFLAGS} ${SYSTEMD_CFLAGS}")
+set(CMAKE_C_FLAGS "-std=c99 -O3 -D_FILE_OFFSET_BITS=64 -D_XOPEN_SOURCE=600 ${MICROHTTPD_CFLAGS} ${CHECK_CFLAGS} ${SYSTEMD_CFLAGS}")
 
 include_directories ("${PROJECT_SOURCE_DIR}/include" ${MICROHTTPD_INCLUDE_DIRS} ${CHECK_INCLUDE_DIRS} ${SYSTEMD_INCLUDE_DIRS})
 
@@ -25,7 +26,7 @@ endif(SYSTEMD_FOUND)
 
 file(GLOB_RECURSE SOURCES src/*.c)
 add_executable(microwebcamd ${SOURCES})
-target_link_libraries(microwebcamd ${MICROHTTPD_LIBRARIES} ${SYSTEMD_LIBRARIES})
+target_link_libraries(microwebcamd ${MICROHTTPD_LIBRARIES} ${SYSTEMD_LIBRARIES} Threads::Threads)
 install(TARGETS microwebcamd DESTINATION bin)
 
 enable_testing()

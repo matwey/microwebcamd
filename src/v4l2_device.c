@@ -37,7 +37,7 @@ static void v4l2_device_stream_off(struct v4l2_device* v4l2_device) {
 
 static void v4l2_device_stop_capture(struct v4l2_device* v4l2_device, unsigned int num) {
 	struct v4l2_requestbuffers reqbuf;
-	
+
 	memset(&reqbuf, 0, sizeof(reqbuf));
 	reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	reqbuf.memory = V4L2_MEMORY_MMAP;
@@ -152,7 +152,7 @@ static void v4l2_device_handle_rx(void* data) {
 	buffer.memory = V4L2_MEMORY_MMAP;
 
 	if (ioctl(v4l2_device->fd, VIDIOC_DQBUF, &buffer) == 0) {
-		printf("%d:%06d\n", buffer.timestamp.tv_sec, buffer.timestamp.tv_usec);
+//		printf("%d:%06d\n", buffer.timestamp.tv_sec, buffer.timestamp.tv_usec);
 		ioctl(v4l2_device->fd, VIDIOC_QBUF, &buffer);
 	}
 }
