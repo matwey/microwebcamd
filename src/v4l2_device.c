@@ -1,5 +1,6 @@
 #include <v4l2_device.h>
 #include <event_loop.h>
+#include <frame_request.h>
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -21,6 +22,7 @@ struct v4l2_device {
 		size_t length;
 	}* buffers;
 	unsigned int buffers_size;
+	struct frame_request_queue queue;
 };
 
 static int v4l2_device_stream_on(struct v4l2_device* v4l2_device) {
@@ -120,10 +122,17 @@ struct v4l2_device* init_v4l2_device(const char* filename) {
 		return NULL;
 	}
 
+	if (init_frame_request_queue(&v4l2_device->queue) == -1) {
+		close(v4l2_device->fd);
+		free(v4l2_device);
+		return NULL;
+	}
+
 	v4l2_device->event_loop_request = NULL;
 	v4l2_device->buffers = NULL;
 
 	if (v4l2_device_setup_capture(v4l2_device) == -1) {
+		free_frame_request_queue(&v4l2_device->queue);
 		close(v4l2_device->fd);
 		free(v4l2_device);
 		return NULL;
@@ -133,6 +142,7 @@ struct v4l2_device* init_v4l2_device(const char* filename) {
 }
 
 void free_v4l2_device(struct v4l2_device* v4l2_device) {
+	free_frame_request_queue(&v4l2_device->queue);
 	if (v4l2_device->buffers) {
 		v4l2_device_stop_capture(v4l2_device, v4l2_device->buffers_size);
 	}
@@ -152,7 +162,7 @@ static void v4l2_device_handle_rx(void* data) {
 	buffer.memory = V4L2_MEMORY_MMAP;
 
 	if (ioctl(v4l2_device->fd, VIDIOC_DQBUF, &buffer) == 0) {
-//		printf("%d:%06d\n", buffer.timestamp.tv_sec, buffer.timestamp.tv_usec);
+		frame_request_queue_process(&v4l2_device->queue);
 		ioctl(v4l2_device->fd, VIDIOC_QBUF, &buffer);
 	}
 }
@@ -166,4 +176,12 @@ int v4l2_device_attach_event_loop(struct v4l2_device* v4l2_device, struct event_
 		return -1;
 
 	return 0;
+}
+
+void v4l2_device_add_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request) {
+	frame_request_queue_enqueue(&v4l2_device->queue, request);
+}
+
+void v4l2_device_del_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request) {
+	frame_request_queue_dequeue(&v4l2_device->queue, request);
 }
