@@ -3,24 +3,22 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-struct frame_request_queue* init_frame_request_queue() {
-	struct frame_request_queue* queue = NULL;
-
-	queue = malloc(sizeof(struct frame_request_queue));
-	if (queue == NULL)
-		return NULL;
-
+int init_frame_request_queue(struct frame_request_queue* queue) {
 	if (pthread_spin_init(&queue->lock, PTHREAD_PROCESS_PRIVATE) != 0) {
-		free(queue);
-		return NULL;
+		return -1;
+	}
+	if (pthread_spin_init(&queue->lock_next, PTHREAD_PROCESS_PRIVATE) != 0) {
+		pthread_spin_destroy(&queue->lock);
+		return -1;
 	}
 
 	init_list_head(&queue->queue);
+	init_list_head(&queue->queue_next);
 
-	return queue;
+	return 0;
 }
 
 void free_frame_request_queue(struct frame_request_queue* queue) {
+	pthread_spin_destroy(&queue->lock_next);
 	pthread_spin_destroy(&queue->lock);
-	free(queue);
 }
