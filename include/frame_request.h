@@ -2,13 +2,15 @@
 #define _FRAME_REQUEST_H
 
 #include <list.h>
+#include <frame.h>
 
 #include <pthread.h>
 
 struct frame_request {
 	struct list_head list;
 	void (*complete)(struct frame_request*);
-	void* data;
+	struct frame* frame;
+	void* user;
 	size_t count;
 };
 
@@ -34,7 +36,7 @@ static inline void frame_request_queue_dequeue(struct frame_request_queue* queue
 	pthread_spin_unlock(&queue->lock);
 }
 
-static inline void frame_request_queue_process(struct frame_request_queue* queue) {
+static inline void frame_request_queue_process(struct frame_request_queue* queue, struct frame* frame) {
 	struct frame_request* pos;
 	struct frame_request* next;
 
@@ -48,6 +50,7 @@ static inline void frame_request_queue_process(struct frame_request_queue* queue
 		if (--(pos->count) == 0) {
 			list_head_remove(&pos->list);
 		}
+		pos->frame = frame_get(frame);
 		pos->complete(pos);
 	}
 	pthread_spin_unlock(&queue->lock);

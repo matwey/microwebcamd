@@ -6,9 +6,10 @@
 #include <v4l2_device.h>
 
 static void handle_complete(struct frame_request* req) {
-	struct v4l2_device* v4l2_device = req->data;
+	struct v4l2_device* v4l2_device = req->user;
 
-	printf("complete %p %zu %p\n", req, req->count, req->complete);
+	printf("complete %p %zu %p %p\n", req, req->count, req->complete, req->frame);
+	frame_put(req->frame);
 	if (req->count == 0) {
 		req->count = 10;
 		v4l2_device_add_frame_request(v4l2_device, req);
@@ -38,7 +39,7 @@ int main(int argc, char** argv) {
 	}
 
 	req.complete = &handle_complete;
-	req.data = v4l2_device;
+	req.user = v4l2_device;
 	req.count = 10;
 	v4l2_device_add_frame_request(v4l2_device, &req);
 
