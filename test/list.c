@@ -122,6 +122,83 @@ START_TEST (test_list_for_each2) {
 }
 END_TEST
 
+START_TEST (test_list_splice1) {
+	struct list_head head;
+	struct list_head other;
+	struct list_head item1;
+	struct list_head item2;
+	init_list_head(&head);
+	init_list_head(&other);
+	list_head_push_back(&head, &item1);
+	list_head_push_back(&head, &item2);
+	list_head_splice(&head, &other);
+	ck_assert(list_head_empty(&other));
+	ck_assert(head.next == &item1);
+	ck_assert(head.prev == &item2);
+}
+END_TEST
+
+START_TEST (test_list_splice2) {
+	struct list_head head;
+	struct list_head other;
+	struct list_head item1;
+	struct list_head item2;
+	init_list_head(&head);
+	init_list_head(&other);
+	list_head_push_back(&other, &item1);
+	list_head_push_back(&other, &item2);
+	list_head_splice(&head, &other);
+	ck_assert(list_head_empty(&other));
+	ck_assert(head.next == &item1);
+	ck_assert(head.prev == &item2);
+}
+END_TEST
+
+START_TEST (test_list_splice3) {
+	struct list_head head;
+	struct list_head other;
+	struct list_head item1;
+	struct list_head item2;
+	struct list_head item3;
+	init_list_head(&head);
+	init_list_head(&other);
+	list_head_push_back(&head, &item1);
+	list_head_push_back(&head, &item2);
+	list_head_push_back(&other, &item3);
+	list_head_splice(&head, &other);
+	ck_assert(list_head_empty(&other));
+	ck_assert(head.next == &item1);
+	ck_assert(head.prev == &item3);
+	ck_assert(item3.prev == &item2);
+	ck_assert(item2.next == &item3);
+	ck_assert(item3.next == &head);
+}
+END_TEST
+
+START_TEST (test_list_splice4) {
+	struct list_head head;
+	struct list_head other;
+	struct list_head item1;
+	struct list_head item2;
+	struct list_head item3;
+	struct list_head item4;
+	init_list_head(&head);
+	init_list_head(&other);
+	list_head_push_back(&head, &item1);
+	list_head_push_back(&head, &item2);
+	list_head_push_back(&other, &item3);
+	list_head_push_back(&other, &item4);
+	list_head_splice(&head, &other);
+	ck_assert(list_head_empty(&other));
+	ck_assert(head.next == &item1);
+	ck_assert(head.prev == &item4);
+	ck_assert(item3.prev == &item2);
+	ck_assert(item2.next == &item3);
+	ck_assert(item4.next == &head);
+	ck_assert(item4.prev == &item3);
+}
+END_TEST
+
 Suite* list_suite(void) {
 	Suite *s;
 	TCase *tc_core;
@@ -138,6 +215,10 @@ Suite* list_suite(void) {
 	tcase_add_test(tc_core, test_list_for_each1);
 	tcase_add_test(tc_core, test_list_for_each2);
 	tcase_add_test(tc_core, test_list_item1);
+	tcase_add_test(tc_core, test_list_splice1);
+	tcase_add_test(tc_core, test_list_splice2);
+	tcase_add_test(tc_core, test_list_splice3);
+	tcase_add_test(tc_core, test_list_splice4);
 
 	suite_add_tcase(s, tc_core);
 
