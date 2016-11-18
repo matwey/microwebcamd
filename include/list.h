@@ -54,4 +54,11 @@ static inline void list_head_splice(struct list_head* head, struct list_head* ot
 	     &pos->member != (head); \
 	     pos = list_entry(pos->member.next, type, member))
 
+#define list_for_each_entry_safe(pos, n, head, type, member) \
+	for (pos = list_entry((head)->next, type, member), \
+	     n   = list_entry(pos->member.next, type, member); \
+	     &pos->member != (head); \
+	     pos = n, \
+	     n   = list_entry(n->member.next, type, member))
+
 #endif // _LIST_H

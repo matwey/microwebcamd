@@ -122,6 +122,32 @@ START_TEST (test_list_for_each2) {
 }
 END_TEST
 
+START_TEST (test_list_for_each_safe1) {
+	struct item {
+		int payload;
+		struct list_head list;
+	};
+	struct list_head head;
+	struct item item1;
+	struct item item2;
+	init_list_head(&head);
+	item1.payload = 0;
+	item2.payload = 1;
+	list_head_push_back(&head, &item1.list);
+	list_head_push_back(&head, &item2.list);
+	struct item* it;
+	struct item* n;
+	int i=0;
+	list_for_each_entry_safe(it, n, &head, struct item, list) {
+		ck_assert_int_eq(i, it->payload);
+		list_head_remove(&it->list);
+		it->list.next = it->list.prev = NULL;
+		i++;
+	}
+	ck_assert_int_eq(i, 2);
+}
+END_TEST
+
 START_TEST (test_list_splice1) {
 	struct list_head head;
 	struct list_head other;
@@ -214,6 +240,7 @@ Suite* list_suite(void) {
 	tcase_add_test(tc_core, test_list_remove1);
 	tcase_add_test(tc_core, test_list_for_each1);
 	tcase_add_test(tc_core, test_list_for_each2);
+	tcase_add_test(tc_core, test_list_for_each_safe1);
 	tcase_add_test(tc_core, test_list_item1);
 	tcase_add_test(tc_core, test_list_splice1);
 	tcase_add_test(tc_core, test_list_splice2);
