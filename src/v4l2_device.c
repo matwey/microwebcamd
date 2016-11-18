@@ -176,6 +176,7 @@ static void v4l2_device_handle_rx(void* data) {
 	if (ioctl(v4l2_device->fd, VIDIOC_DQBUF, &buffer) == 0) {
 		init_frame(v4l2_device->frames+buffer.index, &v4l2_device_handle_frame_defer);
 		frame_request_queue_process(&v4l2_device->queue, v4l2_device->frames+buffer.index);
+		frame_put(v4l2_device->frames+buffer.index);
 	}
 }
 
