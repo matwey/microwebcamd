@@ -4,11 +4,11 @@
 #include <pthread.h>
 
 int init_frame_request_queue(struct frame_request_queue* queue) {
-	if (pthread_spin_init(&queue->lock, PTHREAD_PROCESS_PRIVATE) != 0) {
+	if (pthread_mutex_init(&queue->lock, PTHREAD_PROCESS_PRIVATE) != 0) {
 		return -1;
 	}
-	if (pthread_spin_init(&queue->lock_next, PTHREAD_PROCESS_PRIVATE) != 0) {
-		pthread_spin_destroy(&queue->lock);
+	if (pthread_mutex_init(&queue->lock_next, PTHREAD_PROCESS_PRIVATE) != 0) {
+		pthread_mutex_destroy(&queue->lock);
 		return -1;
 	}
 
@@ -19,6 +19,6 @@ int init_frame_request_queue(struct frame_request_queue* queue) {
 }
 
 void free_frame_request_queue(struct frame_request_queue* queue) {
-	pthread_spin_destroy(&queue->lock_next);
-	pthread_spin_destroy(&queue->lock);
+	pthread_mutex_destroy(&queue->lock_next);
+	pthread_mutex_destroy(&queue->lock);
 }
