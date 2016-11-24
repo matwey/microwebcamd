@@ -3,11 +3,12 @@
 
 #include <object.h>
 
+#include <linux/videodev2.h>
+
 struct frame {
 	struct object object;
 	void* data;
 	size_t length;
-//	struct v4l2_pix_format v4l2_pix_format;
 	void* user;
 };
 

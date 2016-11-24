@@ -198,3 +198,18 @@ void v4l2_device_add_frame_request(struct v4l2_device* v4l2_device, struct frame
 void v4l2_device_del_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request) {
 	frame_request_queue_dequeue(&v4l2_device->queue, request);
 }
+
+int v4l2_device_get_format(struct v4l2_device* v4l2_device, struct v4l2_pix_format* v4l2_pix_format) {
+	struct v4l2_format format;
+
+	memset(&format, 0, sizeof(format));
+	format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	if (ioctl(v4l2_device->fd, VIDIOC_G_FMT, &format) == -1) {
+		return -1;
+	}
+
+	*v4l2_pix_format = format.fmt.pix;
+
+	return 0;
+}

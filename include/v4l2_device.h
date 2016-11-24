@@ -11,5 +11,6 @@ int v4l2_device_attach_event_loop(struct v4l2_device* v4l2_device, struct event_
 void free_v4l2_device(struct v4l2_device* v4l2_device);
 void v4l2_device_add_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request);
 void v4l2_device_del_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request);
+int v4l2_device_get_format(struct v4l2_device* v4l2_device, struct v4l2_pix_format* v4l2_pix_format);
 
 #endif // _V4L2_DEVICE_H
