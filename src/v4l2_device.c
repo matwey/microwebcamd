@@ -113,11 +113,6 @@ static int v4l2_device_setup_capture(struct v4l2_device* v4l2_device) {
 		}
 	}
 
-	if (v4l2_device_stream_on(v4l2_device) == -1) {
-		v4l2_device_stop_capture(v4l2_device, v4l2_device->frames_num);
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -172,8 +167,13 @@ struct v4l2_device* init_v4l2_device(const char* filename, struct event_loop* ev
 	if (v4l2_device_setup_capture(v4l2_device) == -1)
 		goto err_setup_capture;
 
+	if (v4l2_device_stream_on(v4l2_device) == -1)
+		goto err_stream_on;
+
 	return v4l2_device;
 
+err_stream_on:
+	v4l2_device_stop_capture(v4l2_device, 0);
 err_setup_capture:
 	free_frame_request_queue(&v4l2_device->queue);
 err_init_frame_request_queue:
@@ -185,9 +185,7 @@ err:
 }
 
 void free_v4l2_device(struct v4l2_device* v4l2_device) {
-	if (v4l2_device->frames) {
-		v4l2_device_stop_capture(v4l2_device, v4l2_device->frames_num);
-	}
+	v4l2_device_stop_capture(v4l2_device, 0);
 	free_frame_request_queue(&v4l2_device->queue);
 	close(v4l2_device->fd);
 	free(v4l2_device);
