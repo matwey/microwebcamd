@@ -26,12 +26,24 @@ struct v4l2_device {
 static int v4l2_device_stream_on(struct v4l2_device* v4l2_device) {
 	int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-	return ioctl(v4l2_device->fd, VIDIOC_STREAMON, &type);
+	if (ioctl(v4l2_device->fd, VIDIOC_STREAMON, &type) == -1)
+		goto err;
+
+	if (event_loop_add_request(v4l2_device->event_loop_request.event_loop, &v4l2_device->event_loop_request) == -1)
+		goto err_event_loop_add_request;
+
+	return 0;
+
+err_event_loop_add_request:
+	ioctl(v4l2_device->fd, VIDIOC_STREAMOFF, &type);
+err:
+	return -1;
 }
 
 static void v4l2_device_stream_off(struct v4l2_device* v4l2_device) {
 	int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
+	event_loop_del_request(&v4l2_device->event_loop_request);
 	ioctl(v4l2_device->fd, VIDIOC_STREAMOFF, &type);
 }
 
@@ -137,7 +149,7 @@ static void v4l2_device_handle_rx(void* data) {
 	}
 }
 
-struct v4l2_device* init_v4l2_device(const char* filename) {
+struct v4l2_device* init_v4l2_device(const char* filename, struct event_loop* event_loop) {
 	struct v4l2_device* v4l2_device = NULL;
 
 	v4l2_device = malloc(sizeof(struct v4l2_device));
@@ -150,7 +162,7 @@ struct v4l2_device* init_v4l2_device(const char* filename) {
 	if (init_frame_request_queue(&v4l2_device->queue) == -1)
 		goto err_init_frame_request_queue;
 
-	v4l2_device->event_loop_request.event_loop   = NULL;
+	v4l2_device->event_loop_request.event_loop   = event_loop;
 	v4l2_device->event_loop_request.fd           = v4l2_device->fd;
 	v4l2_device->event_loop_request.handle_event = &v4l2_device_handle_rx;
 	v4l2_device->event_loop_request.user         = v4l2_device;
@@ -173,11 +185,10 @@ err:
 }
 
 void free_v4l2_device(struct v4l2_device* v4l2_device) {
-	free_frame_request_queue(&v4l2_device->queue);
 	if (v4l2_device->frames) {
 		v4l2_device_stop_capture(v4l2_device, v4l2_device->frames_num);
 	}
-	event_loop_del_request(&v4l2_device->event_loop_request);
+	free_frame_request_queue(&v4l2_device->queue);
 	close(v4l2_device->fd);
 	free(v4l2_device);
 }
@@ -186,7 +197,6 @@ int v4l2_device_attach_event_loop(struct v4l2_device* v4l2_device, struct event_
 	if (v4l2_device->event_loop_request.event_loop != NULL)
 		return -1;
 
-	return event_loop_add_request(event_loop, &v4l2_device->event_loop_request);
 }
 
 void v4l2_device_add_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request) {

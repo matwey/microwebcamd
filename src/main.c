@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	v4l2_device = init_v4l2_device("/dev/video0");
+	v4l2_device = init_v4l2_device("/dev/video0", event_loop);
 	if (v4l2_device == NULL) {
 		perror("init_v4l2_device");
 		return 1;
@@ -46,11 +46,6 @@ int main(int argc, char** argv) {
 	req.user = jpeg_encoder;
 	req.count = 10;
 	jpeg_encoder_add_frame_request(jpeg_encoder, &req);
-
-	if (v4l2_device_attach_event_loop(v4l2_device, event_loop) == -1) {
-		perror("v4l2_device_attach_event_loop");
-		return 1;
-	}
 
 	while (!event_loop_wait(event_loop, 1000));
 
