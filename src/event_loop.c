@@ -9,12 +9,6 @@
 struct event_loop {
 	int fd;
 };
-struct event_loop_request {
-	struct event_loop* event_loop;
-	int fd;
-	void (*handle_rx)(void*);
-	void* data;
-};
 
 struct event_loop* init_event_loop() {
 	struct event_loop* event_loop = NULL;
@@ -36,28 +30,18 @@ void free_event_loop(struct event_loop* event_loop) {
 	free(event_loop);
 }
 
-struct event_loop_request* event_loop_add_request(struct event_loop* event_loop, int fd, void (*handle_rx)(void*), void* data) {
+int event_loop_add_request(struct event_loop* event_loop, struct event_loop_request* request) {
 	struct epoll_event ev;
-	struct event_loop_request* req = NULL;
-
-	req = malloc(sizeof(struct event_loop_request));
-	if (req == NULL)
-		return NULL;
-
-	req->event_loop = event_loop;
-	req->fd = fd;
-	req->handle_rx = handle_rx;
-	req->data = data;
 
 	ev.events = EPOLLIN;
-	ev.data.ptr = req;
+	ev.data.ptr = request;
 
-	if (epoll_ctl(event_loop->fd, EPOLL_CTL_ADD, fd, &ev) == -1) {
-		free(req);
-		return NULL;
-	}
+	if (epoll_ctl(event_loop->fd, EPOLL_CTL_ADD, request->fd, &ev) == -1)
+		return -1;
 
-	return req;
+	request->event_loop = event_loop;
+
+	return 0;
 }
 
 void event_loop_del_request(struct event_loop_request* request) {
@@ -65,7 +49,6 @@ void event_loop_del_request(struct event_loop_request* request) {
 	struct event_loop* event_loop = request->event_loop;
 
 	epoll_ctl(event_loop->fd, EPOLL_CTL_DEL, request->fd, &ev);
-	free(request);
 }
 
 int event_loop_wait(struct event_loop* event_loop, int timeout) {
@@ -79,7 +62,7 @@ int event_loop_wait(struct event_loop* event_loop, int timeout) {
 
 		for (i = 0; i < nfds; ++i) {
 			struct event_loop_request* req = events[i].data.ptr;
-			req->handle_rx(req->data);
+			req->handle_event(req->user);
 		}
 	} while (nfds == MAX_EVENTS);
 

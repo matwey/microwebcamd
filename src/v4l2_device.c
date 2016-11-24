@@ -17,7 +17,7 @@
 
 struct v4l2_device {
 	int fd;
-	struct event_loop_request* event_loop_request;
+	struct event_loop_request event_loop_request;
 	struct frame* frames;
 	size_t frames_num;
 	struct frame_request_queue queue;
@@ -109,49 +109,6 @@ static int v4l2_device_setup_capture(struct v4l2_device* v4l2_device) {
 	return 0;
 }
 
-struct v4l2_device* init_v4l2_device(const char* filename) {
-	struct v4l2_device* v4l2_device = NULL;
-
-	v4l2_device = malloc(sizeof(struct v4l2_device));
-	if (v4l2_device == NULL)
-		return NULL;
-
-	if ((v4l2_device->fd = open(filename, O_NONBLOCK | O_RDWR)) == -1) {
-		free(v4l2_device);
-		return NULL;
-	}
-
-	if (init_frame_request_queue(&v4l2_device->queue) == -1) {
-		close(v4l2_device->fd);
-		free(v4l2_device);
-		return NULL;
-	}
-
-	v4l2_device->event_loop_request = NULL;
-	v4l2_device->frames = NULL;
-
-	if (v4l2_device_setup_capture(v4l2_device) == -1) {
-		free_frame_request_queue(&v4l2_device->queue);
-		close(v4l2_device->fd);
-		free(v4l2_device);
-		return NULL;
-	}
-
-	return v4l2_device;
-}
-
-void free_v4l2_device(struct v4l2_device* v4l2_device) {
-	free_frame_request_queue(&v4l2_device->queue);
-	if (v4l2_device->frames) {
-		v4l2_device_stop_capture(v4l2_device, v4l2_device->frames_num);
-	}
-	if (v4l2_device->event_loop_request) {
-		event_loop_del_request(v4l2_device->event_loop_request);
-	}
-	close(v4l2_device->fd);
-	free(v4l2_device);
-}
-
 static void v4l2_device_handle_frame_defer(struct object* object) {
 	struct frame* frame = frame_from_object(object);
 	struct v4l2_device* v4l2_device = frame->user;
@@ -180,15 +137,56 @@ static void v4l2_device_handle_rx(void* data) {
 	}
 }
 
+struct v4l2_device* init_v4l2_device(const char* filename) {
+	struct v4l2_device* v4l2_device = NULL;
+
+	v4l2_device = malloc(sizeof(struct v4l2_device));
+	if (v4l2_device == NULL)
+		goto err;
+
+	if ((v4l2_device->fd = open(filename, O_NONBLOCK | O_RDWR)) == -1)
+		goto err_open;
+
+	if (init_frame_request_queue(&v4l2_device->queue) == -1)
+		goto err_init_frame_request_queue;
+
+	v4l2_device->event_loop_request.event_loop   = NULL;
+	v4l2_device->event_loop_request.fd           = v4l2_device->fd;
+	v4l2_device->event_loop_request.handle_event = &v4l2_device_handle_rx;
+	v4l2_device->event_loop_request.user         = v4l2_device;
+
+	v4l2_device->frames = NULL;
+
+	if (v4l2_device_setup_capture(v4l2_device) == -1)
+		goto err_setup_capture;
+
+	return v4l2_device;
+
+err_setup_capture:
+	free_frame_request_queue(&v4l2_device->queue);
+err_init_frame_request_queue:
+	close(v4l2_device->fd);
+err_open:
+	free(v4l2_device);
+err:
+	return NULL;
+}
+
+void free_v4l2_device(struct v4l2_device* v4l2_device) {
+	free_frame_request_queue(&v4l2_device->queue);
+	if (v4l2_device->frames) {
+		v4l2_device_stop_capture(v4l2_device, v4l2_device->frames_num);
+	}
+	event_loop_del_request(&v4l2_device->event_loop_request);
+	close(v4l2_device->fd);
+	free(v4l2_device);
+}
+
 int v4l2_device_attach_event_loop(struct v4l2_device* v4l2_device, struct event_loop* event_loop) {
-	if (v4l2_device->event_loop_request != NULL)
+	if (v4l2_device->event_loop_request.event_loop != NULL)
 		return -1;
 
-	v4l2_device->event_loop_request = event_loop_add_request(event_loop, v4l2_device->fd, v4l2_device_handle_rx, v4l2_device);
-	if (v4l2_device->event_loop_request == NULL)
-		return -1;
-
-	return 0;
+	return event_loop_add_request(event_loop, &v4l2_device->event_loop_request);
 }
 
 void v4l2_device_add_frame_request(struct v4l2_device* v4l2_device, struct frame_request* request) {
