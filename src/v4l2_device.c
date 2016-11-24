@@ -152,7 +152,7 @@ void free_v4l2_device(struct v4l2_device* v4l2_device) {
 	free(v4l2_device);
 }
 
-void v4l2_device_handle_frame_defer(struct object* object) {
+static void v4l2_device_handle_frame_defer(struct object* object) {
 	struct frame* frame = frame_from_object(object);
 	struct v4l2_device* v4l2_device = frame->user;
 	struct v4l2_buffer buffer;
